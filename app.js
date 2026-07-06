@@ -1,9 +1,9 @@
 
 "use strict";
 
-const VERSION = "Studio 3.0.0";
-const STORAGE_KEY = "mission69_studio_v3";
-const LEGACY_KEYS = ["mission69_elite_v2", "mission69_dream_v1", "mission69_pro_data", "mission69_v2_data", "mission69_v1_data"];
+const VERSION = "Nova 5.0.0";
+const STORAGE_KEY = "mission69_nova_v5";
+const LEGACY_KEYS = ["mission69_withings_v4","mission69_studio_v3","mission69_elite_v2","mission69_dream_v1","mission69_pro_data","mission69_v2_data","mission69_v1_data"];
 const $ = s => document.querySelector(s);
 
 function uid(){ return "id_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-5); }
@@ -34,7 +34,6 @@ const DEFAULT = {
 };
 
 let state = loadState();
-let deferredInstallPrompt = null;
 
 function loadState(){
   let raw = localStorage.getItem(STORAGE_KEY);
@@ -111,7 +110,7 @@ function render(){
   requestAnimationFrame(drawAllCharts);
 }
 function header(){
-  return `<header class="topbar"><div class="brand"><div class="logo">69</div><div><div class="kicker">Mission69 · ${esc(VERSION)}</div><h1>Mission69</h1><p class="sub">Simple, beau, modifiable comme un tableau.</p></div></div><div class="actions"><button class="btn hide-sm" onclick="exportJSON()">Exporter</button><button class="btn primary" onclick="openSettings()">Réglages</button></div></header>`;
+  return `<header class="topbar"><div class="brand"><div class="logo">69</div><div><div class="kicker">Mission69 · ${esc(VERSION)}</div><h1>Mission69</h1><p class="sub">Manuel, simple, beau, efficace.</p></div></div><div class="actions"><button class="btn hide-sm" onclick="exportJSON()">Exporter</button><button class="btn primary" onclick="openSettings()">Réglages</button></div></header>`;
 }
 function nav(view){
   const tabs=[["dashboard","Dashboard"],["add","Ajouter"],["tables","Tableaux"],["injections","Injections"],["daily","Journal"],["goals","Objectifs"],["photos","Photos"],["backup","Backup"]];
@@ -143,7 +142,7 @@ function dashboardView(){
   <section class="grid two" style="margin-top:18px"><div class="card"><h2 class="section-title">Courbe poids + projection</h2><div class="canvas-wrap"><canvas id="weightChart"></canvas></div></div><div class="card"><h2 class="section-title">Coach</h2><p class="notice success">${esc(insight())}</p><hr><div class="grid two">${metric("Objectif 100",estimateDate(100),"si tendance actuelle")}${metric("Objectif final",estimateDate(Number(state.profile.targetWeight)),state.profile.targetWeight+" kg")}</div><hr>${miniHabits()}</div></section>`;
 }
 function metric(label,val,sub){ return `<div class="metric"><span class="label">${esc(label)}</span><br><b>${esc(val)}</b><small>${esc(sub)}</small></div>`; }
-function ring(val,label){ const off=540-(540*clamp(val,0,100)/100); return `<div class="ring-wrap"><svg class="ring" viewBox="0 0 200 200"><defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#72FFD6"/><stop offset=".55" stop-color="#8FA6FF"/><stop offset="1" stop-color="#FF83DC"/></linearGradient></defs><circle class="base" cx="100" cy="100" r="86"></circle><circle class="value" cx="100" cy="100" r="86" style="stroke-dashoffset:${off}"></circle></svg><div class="ring-label"><b>${val}%</b><span>${esc(label)}</span></div></div>`; }
+function ring(val,label){ const off=540-(540*clamp(val,0,100)/100); return `<div class="ring-wrap"><svg class="ring" viewBox="0 0 200 200"><defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#78FFD6"/><stop offset=".55" stop-color="#83A6FF"/><stop offset="1" stop-color="#FF77DC"/></linearGradient></defs><circle class="base" cx="100" cy="100" r="86"></circle><circle class="value" cx="100" cy="100" r="86" style="stroke-dashoffset:${off}"></circle></svg><div class="ring-label"><b>${val}%</b><span>${esc(label)}</span></div></div>`; }
 
 function addView(){
   return `<section class="grid two">
@@ -159,7 +158,7 @@ function field(label,id,value,type,ph=""){ return `<div class="field"><label for
 
 function tablesView(){
   const table=state.ui.table||"weights";
-  return `<section class="card"><div class="row wrap"><div><h2 class="section-title">Tableaux modifiables</h2><p class="muted">Tu peux corriger directement les dates, poids, doses, sites, notes et mensurations.</p></div><div class="chips">${[["weights","Poids"],["injections","Injections"],["measurements","Mensurations"],["symptoms","Journal"]].map(([id,l])=>`<button class="chip ${table===id?"active":""}" onclick="setTable('${id}')">${l}</button>`).join("")}</div></div></section><section style="margin-top:18px">${tableHTML(table)}</section>`;
+  return `<section class="card"><div class="row wrap"><div><h2 class="section-title">Tableaux modifiables</h2><p class="muted">Corrige directement les valeurs. Pas de synchro externe : tu gardes le contrôle.</p></div><div class="chips">${[["weights","Poids"],["injections","Injections"],["measurements","Mensurations"],["symptoms","Journal"]].map(([id,l])=>`<button class="chip ${table===id?"active":""}" onclick="setTable('${id}')">${l}</button>`).join("")}</div></div></section><section style="margin-top:18px">${tableHTML(table)}</section>`;
 }
 function setTable(t){ state.ui.table=t; persist(); }
 function tableHTML(t){
@@ -180,9 +179,8 @@ function measurementsTable(){
 function symptomsTable(){
   return `<div class="card table-card"><div class="table-head"><h2 class="section-title">Liste du journal</h2><button class="btn primary" onclick="addEmptySymptom()">+ ligne</button></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Symptômes</th><th>Intensité</th><th>Note</th><th>Actions</th></tr></thead><tbody>${sorted("symptoms").slice().reverse().map(s=>`<tr><td><input id="s_date_${s.id}" type="date" value="${esc(s.date)}"></td><td><input id="s_items_${s.id}" value="${esc((s.items||[]).join(", "))}"></td><td><input id="s_level_${s.id}" type="number" min="0" max="5" value="${esc(s.level||1)}"></td><td><input id="s_note_${s.id}" value="${esc(s.note)}"></td><td><button class="btn small primary" onclick="saveSymptomRow('${s.id}')">OK</button> <button class="btn small danger" onclick="del('symptoms','${s.id}')">Suppr.</button></td></tr>`).join("")}</tbody></table></div></div>`;
 }
-
 function injectionsView(){
-  return `<section class="grid two"><div class="card"><h2 class="section-title">Niveau Wegovy estimé</h2><div class="canvas-wrap small"><canvas id="medChart"></canvas></div><p class="notice">Approximation informative basée sur les injections enregistrées et la demi-vie moyenne.</p></div><div class="card"><h2 class="section-title">Calendrier</h2><p class="muted">Prochaine : <b>${fmtShort(nextInjectionDate())}</b> à ${esc(state.profile.injectionTime)}</p><div class="calendar">${calendarHTML()}</div></div></section><section style="margin-top:18px">${injectionsTable()}</section>`;
+  return `<section class="grid two"><div class="card"><h2 class="section-title">Niveau Wegovy estimé</h2><div class="canvas-wrap small"><canvas id="medChart"></canvas></div><p class="notice">Approximation informative basée sur les injections enregistrées et la demi-vie moyenne.</p></div><div class="card"><h2 class="section-title">Prochaine injection</h2><div class="stat">${fmtShort(nextInjectionDate())}</div><p class="muted">${esc(state.profile.injectionTime)} · ${doseAtWeek(weeksSinceStart(nextInjectionDate())).toFixed(2)} mg · ${esc(nextSite())}</p><button class="btn primary" onclick="addInjectionQuick()">Injection faite</button></div></section><section style="margin-top:18px">${injectionsTable()}</section>`;
 }
 function dailyView(){
   return `<section class="grid two"><div class="card"><h2 class="section-title">Aujourd’hui</h2>${miniHabits()}<hr><textarea id="symptomNote" rows="3" placeholder="Note du jour"></textarea><br><br><button class="btn primary" onclick="saveTodayNote()">Enregistrer note</button></div><div class="card"><h2 class="section-title">Symptômes rapides</h2><div class="chips">${["🙂 rien","🤢 nausée","🔥 reflux","💩 constipation","💨 diarrhée","😴 fatigue","😵‍💫 vertige","🍽️ satiété","🍺 alcool","💧 soif"].map(s=>`<button class="chip" onclick="addSymptom('${esc(s)}')">${esc(s)}</button>`).join("")}</div></div></section><section style="margin-top:18px">${symptomsTable()}</section>`;
@@ -224,19 +222,11 @@ function addSymptom(item){ let s=state.symptoms.find(x=>x.date===todayISO()); if
 function saveTodayNote(){ let s=state.symptoms.find(x=>x.date===todayISO()); if(!s){ s={id:uid(),date:todayISO(),items:[],level:1,note:""}; state.symptoms.push(s); } s.note=$("#symptomNote").value||""; persist(); toast("Note enregistrée"); }
 function quickAdd(){ if((state.ui.view||"")==="injections")addInjectionQuick(); else setView("add"); }
 
-function calendarHTML(){
-  const now=new Date(), y=now.getFullYear(), m=now.getMonth(), first=new Date(y,m,1), last=new Date(y,m+1,0), start=(first.getDay()+6)%7, dates=new Set(state.injections.map(i=>i.date));
-  let html=""; ["L","M","M","J","V","S","D"].forEach(d=>html+=`<div class="label" style="text-align:center">${d}</div>`);
-  for(let i=0;i<start;i++)html+="<div></div>";
-  for(let day=1;day<=last.getDate();day++){ const date=toISO(new Date(y,m,day)); html+=`<div class="day ${dates.has(date)?"hit":""} ${date===todayISO()?"today":""}">${day}${dates.has(date)?"<span class='dot'></span>":""}</div>`; }
-  return html;
-}
-
-function drawAllCharts(){ drawWeight("weightChart",true); drawWeight("weightDetailChart",true); drawMed("medChart"); }
+function drawAllCharts(){ drawWeight("weightChart",true); drawMed("medChart"); }
 function setupCanvas(id){ const c=document.getElementById(id); if(!c)return null; const r=c.getBoundingClientRect(), dpr=devicePixelRatio||1; c.width=Math.max(1,Math.round(r.width*dpr)); c.height=Math.max(1,Math.round(r.height*dpr)); const ctx=c.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx,W:r.width,H:r.height}; }
 function drawWeight(id,proj){ const s=setupCanvas(id); if(!s)return; let pts=sorted("weights").map(w=>({v:Number(w.kg),real:true})); if(pts.length===1)pts.push({v:pts[0].v,real:true}); const rate=trendKgPerWeek()||.5; if(proj&&pts.length){ const last=pts.at(-1).v; for(let i=1;i<=24;i++)pts.push({v:Math.max(Number(state.profile.targetWeight),last-rate*i),real:false}); } drawLine(s.ctx,s.W,s.H,pts,{target:Number(state.profile.targetWeight),unit:"kg",split:pts.findIndex(p=>!p.real)}); }
-function drawMed(id){ const s=setupCanvas(id); if(!s)return; const now=Date.now(); const pts=[]; for(let i=0;i<=42;i++)pts.push({v:medLevelAt(now+i*86400000,true),real:true}); drawLine(s.ctx,s.W,s.H,pts,{target:null,unit:"%",color:"#8fa6ff"}); }
-function drawLine(ctx,W,H,pts,opt){ if(!pts.length)return; const pad=34, vals=pts.map(p=>p.v); if(opt.target!==null&&opt.target!==undefined)vals.push(opt.target); vals.push(Number(state.profile.startWeight)||pts[0].v); const min=Math.floor(Math.min(...vals)-2), max=Math.ceil(Math.max(...vals)+2); const sx=i=>pad+(i/Math.max(1,pts.length-1))*(W-pad*2), sy=v=>pad+(1-(v-min)/Math.max(1,max-min))*(H-pad*2); ctx.clearRect(0,0,W,H); ctx.strokeStyle="rgba(255,255,255,.10)"; ctx.lineWidth=1; for(let i=0;i<5;i++){ const y=pad+i*(H-pad*2)/4; ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-pad,y);ctx.stroke(); } if(opt.target!==null&&opt.target!==undefined){ const y=sy(opt.target); ctx.strokeStyle="rgba(255,198,110,.65)"; ctx.setLineDash([6,6]); ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-pad,y);ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle="rgba(255,255,255,.72)"; ctx.font="800 12px -apple-system"; ctx.fillText("objectif "+opt.target+" "+opt.unit,Math.max(pad,W-pad-110),y-8); } const split=opt.split&&opt.split>0?opt.split:pts.length; const real=pts.slice(0,split), fut=pts.slice(split); ctx.lineWidth=4; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle=opt.color||"#72ffd6"; ctx.beginPath(); real.forEach((p,i)=>i?ctx.lineTo(sx(i),sy(p.v)):ctx.moveTo(sx(i),sy(p.v))); ctx.stroke(); if(fut.length){ ctx.strokeStyle="rgba(143,166,255,.68)"; ctx.setLineDash([9,8]); ctx.beginPath(); ctx.moveTo(sx(real.length-1),sy(real.at(-1).v)); fut.forEach((p,j)=>ctx.lineTo(sx(real.length+j),sy(p.v))); ctx.stroke(); ctx.setLineDash([]); } ctx.fillStyle="#fff"; real.forEach((p,i)=>{ctx.beginPath();ctx.arc(sx(i),sy(p.v),5,0,Math.PI*2);ctx.fill();}); ctx.fillStyle="rgba(255,255,255,.72)"; ctx.font="800 12px -apple-system"; ctx.fillText(max+" "+opt.unit,pad,18); ctx.fillText(min+" "+opt.unit,pad,H-10); }
+function drawMed(id){ const s=setupCanvas(id); if(!s)return; const now=Date.now(); const pts=[]; for(let i=0;i<=42;i++)pts.push({v:medLevelAt(now+i*86400000,true),real:true}); drawLine(s.ctx,s.W,s.H,pts,{target:null,unit:"%",color:"#83a6ff"}); }
+function drawLine(ctx,W,H,pts,opt){ if(!pts.length)return; const pad=34, vals=pts.map(p=>p.v); if(opt.target!==null&&opt.target!==undefined)vals.push(opt.target); vals.push(Number(state.profile.startWeight)||pts[0].v); const min=Math.floor(Math.min(...vals)-2), max=Math.ceil(Math.max(...vals)+2); const sx=i=>pad+(i/Math.max(1,pts.length-1))*(W-pad*2), sy=v=>pad+(1-(v-min)/Math.max(1,max-min))*(H-pad*2); ctx.clearRect(0,0,W,H); ctx.strokeStyle="rgba(255,255,255,.10)"; ctx.lineWidth=1; for(let i=0;i<5;i++){ const y=pad+i*(H-pad*2)/4; ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-pad,y);ctx.stroke(); } if(opt.target!==null&&opt.target!==undefined){ const y=sy(opt.target); ctx.strokeStyle="rgba(255,198,110,.65)"; ctx.setLineDash([6,6]); ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-pad,y);ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle="rgba(255,255,255,.72)"; ctx.font="800 12px -apple-system"; ctx.fillText("objectif "+opt.target+" "+opt.unit,Math.max(pad,W-pad-110),y-8); } const split=opt.split&&opt.split>0?opt.split:pts.length; const real=pts.slice(0,split), fut=pts.slice(split); ctx.lineWidth=4; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle=opt.color||"#78ffd6"; ctx.beginPath(); real.forEach((p,i)=>i?ctx.lineTo(sx(i),sy(p.v)):ctx.moveTo(sx(i),sy(p.v))); ctx.stroke(); if(fut.length){ ctx.strokeStyle="rgba(131,166,255,.68)"; ctx.setLineDash([9,8]); ctx.beginPath(); ctx.moveTo(sx(real.length-1),sy(real.at(-1).v)); fut.forEach((p,j)=>ctx.lineTo(sx(real.length+j),sy(p.v))); ctx.stroke(); ctx.setLineDash([]); } ctx.fillStyle="#fff"; real.forEach((p,i)=>{ctx.beginPath();ctx.arc(sx(i),sy(p.v),5,0,Math.PI*2);ctx.fill();}); ctx.fillStyle="rgba(255,255,255,.72)"; ctx.font="800 12px -apple-system"; ctx.fillText(max+" "+opt.unit,pad,18); ctx.fillText(min+" "+opt.unit,pad,H-10); }
 
 async function addPhoto(){ const f=$("#photoInput")?.files?.[0]; if(!f)return toast("Choisis une photo"); const data=await compressImage(f,1200,.78); state.photos.push({id:uid(),date:todayISO(),label:$("#photoLabel").value||"Photo",data}); persist(); toast("Photo ajoutée"); }
 function compressImage(file,max,quality){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onerror=rej; r.onload=()=>{ const img=new Image(); img.onerror=rej; img.onload=()=>{ const scale=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas"); c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale); c.getContext("2d").drawImage(img,0,0,c.width,c.height); res(c.toDataURL("image/jpeg",quality)); }; img.src=r.result; }; r.readAsDataURL(file); }); }

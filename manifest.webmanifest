@@ -1,13 +1,13 @@
 {
-  "name": "Mission69 Studio",
+  "name": "Mission69 Nova",
   "short_name": "Mission69",
-  "description": "Suivi Wegovy simple, beau, modifiable en tableaux.",
+  "description": "Suivi Wegovy simple, beau et manuel.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#080B12",
-  "background_color": "#080B12",
+  "theme_color": "#050712",
+  "background_color": "#050712",
   "icons": [
     {
       "src": "icon.svg",
