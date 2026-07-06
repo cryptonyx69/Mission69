@@ -1,28 +1,19 @@
-# Mission69 Dream
+# Mission69 Studio V3
 
-PWA personnelle de suivi Wegovy.
+Version centrée sur la simplicité et la praticité.
 
-## Ce qu’il y a dedans
+## Nouveautés
+- Onglet **Tableaux** : poids, injections, mensurations et journal modifiables ligne par ligne.
+- Boutons `+ ligne`, `OK`, `Suppr.` directement dans les tableaux.
+- Interface plus simple : Dashboard / Ajouter / Tableaux / Injections / Journal / Objectifs / Photos / Backup.
+- Formulaires plus courts et plus lisibles.
+- Navigation mobile en bas de l’écran.
+- Export JSON + CSV.
+- Migration automatique depuis les anciennes versions.
 
-- Dashboard complet : poids, IMC, progression, prochaine injection, niveau Wegovy estimé.
-- Suivi poids : pesées, tendance, projection vers les paliers.
-- Suivi injections : dose, site, calendrier, courbe estimée du niveau Wegovy.
-- Journal quotidien : eau, protéines, fibres, marche, symptômes, notes.
-- Objectifs et badges.
-- Photos avant/après compressées localement.
-- Export / import JSON.
-- PWA installable iPhone.
-- Fonctionnement hors ligne après installation.
-
-## Installation GitHub Pages
-
-1. Dézipper `mission69-dream-v1.zip`.
-2. Uploader **le contenu** du dossier à la racine du dépôt GitHub `Mission69`.
-3. Commit message conseillé : `Mission69 Dream v1`.
-4. Attendre le déploiement GitHub Pages.
-5. Ouvrir l’URL sur iPhone dans Safari.
-6. Partager → Ajouter à l’écran d’accueil.
-
-## Données
-
-Tout est stocké dans le navigateur via `localStorage`. Exporter régulièrement un JSON.
+## Installation
+1. Dézipper.
+2. Uploader tout le contenu à la racine du dépôt GitHub.
+3. Commit conseillé : `Mission69 Studio V3`.
+4. Attendre GitHub Pages.
+5. Si l’ancienne version reste visible : Backup → Forcer mise à jour / vider cache.

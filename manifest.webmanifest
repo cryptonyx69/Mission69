@@ -1,13 +1,13 @@
 {
-  "name": "Mission69 Dream",
+  "name": "Mission69 Studio",
   "short_name": "Mission69",
-  "description": "Cockpit personnel Wegovy : poids, injections, objectifs, symptômes, photos et sauvegardes.",
+  "description": "Suivi Wegovy simple, beau, modifiable en tableaux.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#070A12",
-  "background_color": "#070A12",
+  "theme_color": "#080B12",
+  "background_color": "#080B12",
   "icons": [
     {
       "src": "icon.svg",
