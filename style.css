@@ -74,3 +74,8 @@ select option{background:#111827;color:#fff} textarea{resize:vertical}
 .table-wrap table input:focus,.table-wrap table select:focus{background:rgba(120,255,214,.10)}
 .row-number{color:var(--muted);font-weight:900;text-align:center;min-width:38px}
 @media(max-width:920px){.sheet-savebar{top:auto;position:relative;margin:0 12px 12px}.sheet-tip{padding:0 12px 12px}}
+
+.celebration-card.gold{border-color:rgba(255,198,110,.55)}
+.celebration-card.green{border-color:rgba(120,255,214,.55)}
+.celebration-card.pink{border-color:rgba(255,119,220,.55)}
+.victory-mini{font-size:clamp(22px,5vw,38px);font-weight:950;letter-spacing:-.04em;margin:6px 0 0}

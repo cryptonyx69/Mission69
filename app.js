@@ -1,9 +1,9 @@
 
 "use strict";
 
-const VERSION = "Nova 6.3.0";
-const STORAGE_KEY = "mission69_nova_v63";
-const LEGACY_KEYS = ["mission69_nova_v62","mission69_nova_v61","mission69_nova_v6","mission69_nova_v51","mission69_nova_v5","mission69_withings_v4","mission69_studio_v3","mission69_elite_v2","mission69_dream_v1","mission69_pro_data","mission69_v2_data","mission69_v1_data"];
+const VERSION = "v1.08";
+const STORAGE_KEY = "mission69_v108";
+const LEGACY_KEYS = ["mission69_nova_v63","mission69_nova_v62","mission69_nova_v61","mission69_nova_v6","mission69_nova_v51","mission69_nova_v5","mission69_withings_v4","mission69_studio_v3","mission69_elite_v2","mission69_dream_v1","mission69_pro_data","mission69_v2_data","mission69_v1_data"];
 const $ = s => document.querySelector(s);
 
 function uid(){ return "id_" + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-5); }
@@ -31,7 +31,7 @@ const DEFAULT = {
   photos:[],
   sites:["Ventre gauche","Ventre droit","Cuisse gauche","Cuisse droite","Bras gauche","Bras droit"],
   goals:[110,105,100,95,90,85,80,78],
-  ui:{view:"dashboard",table:"weights",twoDigitCelebrated:false}
+  ui:{view:"dashboard",table:"weights",twoDigitCelebrated:false,celebratedVictories:[]}
 };
 
 let state = loadState();
@@ -125,20 +125,19 @@ function header(){
   return `<header class="topbar"><div class="brand"><div class="logo">69</div><div><div class="kicker">Mission69 · ${esc(VERSION)}</div><h1>Mission69</h1><p class="sub">Manuel, simple, beau, efficace.</p></div></div><div class="actions"><button class="btn hide-sm" onclick="exportJSON()">Exporter</button><button class="btn primary" onclick="openSettings()">Réglages</button></div></header>`;
 }
 function nav(view){
-  const tabs=[["dashboard","Dashboard"],["add","Ajouter"],["tables","Tableaux"],["measurements","Mensurations"],["injections","Injections"],["daily","Journal"],["goals","Objectifs"],["photos","Photos"],["control","Contrôle"],["backup","Backup"]];
+  const tabs=[["dashboard","Dashboard"],["tables","Données"],["injections","Injections"],["daily","Journal"],["goals","Objectifs"],["photos","Photos"],["backup","Backup"]];
   return `<nav class="nav">${tabs.map(([id,l])=>`<button class="tab ${view===id?'active':''}" onclick="setView('${id}')">${l}</button>`).join("")}</nav>`;
 }
 function setView(v){ state.ui.view=v; persist(); }
 function gotoTable(t){ state.ui.view="tables"; state.ui.table=t; persist(); }
 function viewHTML(v){
-  if(v==="add")return addView();
+  if(v==="add"){ state.ui.view="tables"; v="tables"; }
   if(v==="tables")return tablesView();
   if(v==="measurements")return measurementsView();
   if(v==="injections")return injectionsView();
   if(v==="daily")return dailyView();
   if(v==="goals")return goalsView();
   if(v==="photos")return photosView();
-  if(v==="control")return controlView();
   if(v==="backup")return backupView();
   return dashboardView();
 }
@@ -146,7 +145,7 @@ function dashboardView(){
   const cw=currentWeight(), pg=progressPct(), next=nextInjectionDate(), ng=nextGoal(), rate=trendKgPerWeek(), wk=weeksSinceStart(next);
   return `<section class="layout">
     <div class="grid">
-      <div class="card hero clickable" onclick="gotoTable('weights')"><div class="row wrap"><span class="label">Poids actuel</span><span class="btn primary">Modifier les poids</span></div><div class="big">${cw.toFixed(1)} <small>kg</small></div><div class="progress"><div class="bar" style="width:${pg}%"></div></div><div class="row muted"><span>${pg.toFixed(0)} % de la mission</span><span>${Math.max(0,remainingKg()).toFixed(1)} kg restants</span></div></div>
+      <div class="card hero clickable" onclick="gotoTable('weights')"><div class="row wrap"><span class="label">Poids actuel</span><span class="badge-soft">Tableau poids</span></div><div class="big">${cw.toFixed(1)} <small>kg</small></div><div class="progress"><div class="bar" style="width:${pg}%"></div></div><div class="row muted"><span>${pg.toFixed(0)} % de la mission</span><span>${Math.max(0,remainingKg()).toFixed(1)} kg restants</span></div></div>
       <div class="grid four">
         ${metric("IMC",bmi().toFixed(1),bmiLabel(),"setView('measurements')")}
         ${metric("Tendance",rate?rate.toFixed(2)+" kg/sem.":"—","Modifier les pesées","gotoTable('weights')")}
@@ -160,7 +159,7 @@ function dashboardView(){
     </div>
   </section>
   <section class="grid two" style="margin-top:18px">
-    <div class="card"><div class="row wrap"><h2 class="section-title">Courbe poids + projection</h2><button class="btn primary" onclick="openChart()">Agrandir</button></div><div class="canvas-wrap"><canvas id="weightChart"></canvas></div></div>
+    <div class="card clickable" onclick="openChart()"><div class="row wrap"><h2 class="section-title">Courbe poids + projection</h2><span class="badge-soft">Toucher pour agrandir</span></div><div class="canvas-wrap"><canvas id="weightChart"></canvas></div><p class="muted">Mini-échelle visible. En grand, les axes sont détaillés.</p></div>
     <div class="card"><h2 class="section-title">Coach</h2><p class="notice success">${esc(insight())}</p><hr><div class="grid two">${metric("Objectif 100",estimateDate(100),"si tendance actuelle","gotoTable('weights')")}${metric("Objectif final",estimateDate(Number(state.profile.targetWeight)),state.profile.targetWeight+" kg","setView('goals')")}</div><hr>${miniHabits()}</div>
   </section>`;
 }
@@ -188,7 +187,7 @@ function measurementFields(prefix){
 
 function tablesView(){
   const table=state.ui.table||"weights";
-  return `<section class="card"><div class="row wrap"><div><h2 class="section-title">Tableaux modifiables</h2><p class="muted">Tu peux tout corriger, puis cliquer une seule fois sur <b>Enregistrer tout</b>.</p></div><div class="chips">${[["weights","Poids"],["injections","Injections"],["measurements","Mensurations"],["symptoms","Journal"]].map(([id,l])=>`<button class="chip ${table===id?"active":""}" onclick="setTable('${id}')">${l}</button>`).join("")}</div></div></section><section style="margin-top:18px">${tableHTML(table)}</section>`;
+  return `<section class="card"><div class="row wrap"><div><h2 class="section-title">Données modifiables</h2><p class="muted">Saisie simple en tableau : tu modifies plusieurs cellules, puis <b>Enregistrer tout</b> une seule fois.</p></div><div class="chips">${[["weights","Poids"],["injections","Injections"],["measurements","Mensurations"],["symptoms","Journal"]].map(([id,l])=>`<button class="chip ${table===id?"active":""}" onclick="setTable('${id}')">${l}</button>`).join("")}</div></div></section><section style="margin-top:18px">${tableHTML(table)}</section>`;
 }
 function setTable(t){ state.ui.table=t; persist(); }
 function tableHTML(t){ if(t==="injections")return injectionsTable(); if(t==="measurements")return measurementsTable(); if(t==="symptoms")return symptomsTable(); return weightsTable(); }
@@ -227,28 +226,7 @@ function symptomsTable(){
     <div class="table-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Symptômes</th><th>Intensité</th><th>Note</th><th>Suppr.</th></tr></thead><tbody>${rows.map((s,idx)=>`<tr data-id="${s.id}"><td class="row-number">${idx+1}</td><td><input id="s_date_${s.id}" type="date" value="${esc(s.date)}"></td><td><input class="wide" id="s_items_${s.id}" value="${esc((s.items||[]).join(", "))}"></td><td><input class="narrow" id="s_level_${s.id}" type="number" min="0" max="5" value="${esc(s.level||1)}"></td><td><input class="wide" id="s_note_${s.id}" value="${esc(s.note)}"></td><td><input class="delete-check" id="s_del_${s.id}" type="checkbox"></td></tr>`).join("")}</tbody></table></div>
   </div>`;
 }
-function controlView(){
-  const fields = [
-    ["Mollet gauche", "calfL"], ["Mollet droit", "calfR"],
-    ["Bras gauche", "armL"], ["Bras droit", "armR"],
-    ["Cuisse gauche", "thighL"], ["Cuisse droite", "thighR"]
-  ];
-  const hasV6Measures = fields.every(([label,key]) => true);
-  return `<section class="card">
-    <h2 class="section-title">Contrôle V6.2</h2>
-    <p class="notice success">Cette page sert à vérifier noir sur blanc que les fonctions demandées sont présentes dans la version installée.</p>
-    <div class="grid two">
-      ${metric("Mollets G/D", "OK", "Champs mollet gauche + mollet droit dans Ajouter, Mensurations et Tableaux")}
-      ${metric("Bras G/D", "OK", "Champs bras gauche + bras droit")}
-      ${metric("Cuisses G/D", "OK", "Champs cuisse gauche + cuisse droite")}
-      ${metric("Clics Wegovy", "OK", "0.25 mg = 8 clics · 0.5 mg = 16 clics · 1.0 mg = 32 clics")}
-      ${metric("Dashboard cliquable", "OK", "Poids, IMC, tendance, injections et objectifs ouvrent la bonne zone")}
-      ${metric("Tableaux en masse", "OK", "Un seul bouton Enregistrer tout par tableau, aucune sauvegarde ligne par ligne")}
-      ${metric("Graphe poids grand", "OK", "Bouton Agrandir sur la courbe du poids")}
-      ${metric("Graphe Wegovy expliqué", "OK", "Axe Y en %, axe X aujourd’hui à +42 jours")}
-    </div>
-  </section>`;
-}
+
 
 function injectionsView(){
   return `<section class="grid two"><div class="card"><h2 class="section-title">Niveau Wegovy estimé</h2><div class="canvas-wrap small"><canvas id="medChart"></canvas></div><p class="notice"><b>Lecture :</b> axe gauche = niveau relatif estimé en %, axe bas = temps. À gauche : aujourd’hui. À droite : dans 42 jours. La courbe projette l’effet des injections enregistrées et prévues.</p></div><div class="card"><h2 class="section-title">Prochaine injection</h2><div class="stat">${fmtShort(nextInjectionDate())}</div><p class="muted">${esc(state.profile.injectionTime)} · ${doseAtWeek(weeksSinceStart(nextInjectionDate())).toFixed(2)} mg · ${clicksAtWeek(weeksSinceStart(nextInjectionDate()))} clics · ${esc(nextSite())}</p><button class="btn primary" onclick="addInjectionQuick()">Injection faite</button><hr><div class="grid two">${state.doseSchedule.map(s=>metric("Semaine "+s.fromWeek+"+", Number(s.dose).toFixed(2)+" mg", (s.clicks||defaultClicks(s.dose))+" clics")).join("")}</div></div></section><section style="margin-top:18px">${injectionsTable()}</section>`;
@@ -352,52 +330,175 @@ function toggleHabit(k){ const h=habitToday(); h[k]=!h[k]; persist(); }
 function addWater(d){ const h=habitToday(); h.water=clamp(round1(Number(h.water||0)+d),0,8); persist(); }
 function addSymptom(item){ let s=state.symptoms.find(x=>x.date===todayISO()); if(!s){ s={id:uid(),date:todayISO(),items:[],level:1,note:""}; state.symptoms.push(s); } if(!s.items.includes(item))s.items.push(item); persist(); toast("Journal mis à jour"); }
 function saveTodayNote(){ let s=state.symptoms.find(x=>x.date===todayISO()); if(!s){ s={id:uid(),date:todayISO(),items:[],level:1,note:""}; state.symptoms.push(s); } s.note=val("symptomNote")||""; persist(); toast("Note enregistrée"); }
-function quickAdd(){ if((state.ui.view||"")==="injections")addInjectionQuick(); else setView("add"); }
+function quickAdd(){ if((state.ui.view||"")==="injections")addInjectionQuick(); else { state.ui.view="tables"; state.ui.table="weights"; persist(); } }
 
 
 function celebrationOverlay(){
   const colors=["#78ffd6","#83a6ff","#ff77dc","#ffc66e","#ffffff"];
-  const pieces=Array.from({length:90},(_,i)=>{
+  const pieces=Array.from({length:100},(_,i)=>{
     const left=(i*37)%100, delay=((i*0.073)%2.8).toFixed(2), dur=(2.6+(i%9)*0.16).toFixed(2), color=colors[i%colors.length];
     return `<span class="confetti" style="left:${left}%;background:${color};animation-delay:${delay}s;animation-duration:${dur}s"></span>`;
   }).join("");
-  return `<div class="celebration" id="twoDigitCelebration">
+  return `<div class="celebration" id="victoryCelebration">
     ${pieces}
-    <div class="celebration-card">
-      <div class="badge-legend">🏆 PALIER LÉGENDAIRE</div>
-      <div class="celebration-title">2 CHIFFRES</div>
-      <p class="celebration-sub">Tu es passé sous les 100 kg.</p>
-      <p class="muted">C’est le palier psychologique qui change tout. Mission69 vient de basculer dans une autre dimension.</p>
+    <div class="celebration-card gold" id="victoryCard">
+      <div class="badge-legend" id="victoryBadge">🏆 VICTOIRE</div>
+      <div class="celebration-title" id="victoryTitle">BRAVO</div>
+      <p class="celebration-sub" id="victorySub">Nouvelle étape débloquée.</p>
+      <p class="muted" id="victoryText">Mission69 avance.</p>
+      <div class="victory-mini" id="victoryMini"></div>
       <div class="chips" style="justify-content:center;margin-top:18px">
         <button class="btn primary" onclick="closeCelebration()">Je savoure 🔥</button>
-        <button class="btn" onclick="gotoTable('weights');closeCelebration()">Voir mes poids</button>
+        <button class="btn" onclick="setView('goals');closeCelebration()">Voir objectifs</button>
       </div>
     </div>
   </div>`;
 }
 function checkTwoDigitCelebration(){
-  if(currentWeight() < 100 && !state.ui.twoDigitCelebrated){
-    state.ui.twoDigitCelebrated = true;
+  if(!Array.isArray(state.ui.celebratedVictories)) state.ui.celebratedVictories=[];
+  const queue=[];
+  if(lostKg()>=5 && !state.ui.celebratedVictories.includes("loss5")) queue.push({id:"loss5",kind:"green",badge:"💪 PREMIÈRE CLAQUE",title:"−5 KG",sub:"Premier gros cap validé.",text:"C’est déjà une vraie différence. Le corps et la tête ont compris que la mission est lancée.",mini:"On continue."});
+  if(lostKg()>=10 && !state.ui.celebratedVictories.includes("loss10")) queue.push({id:"loss10",kind:"pink",badge:"🔥 ÉNORME",title:"−10 KG",sub:"Dix kilos envolés.",text:"Là, ce n’est plus un début. C’est une transformation en marche.",mini:"Respect."});
+  for(const g of state.goals){
+    const id="goal"+g;
+    if(currentWeight()<=g && !state.ui.celebratedVictories.includes(id) && g!==100) queue.push({id,kind:"green",badge:"🏁 PALIER DÉBLOQUÉ",title:g+" KG",sub:"Nouveau palier atteint.",text:"Chaque palier rend la suite plus crédible.",mini:"Prochaine marche."});
+  }
+  if(currentWeight()<100 && !state.ui.twoDigitCelebrated) queue.push({id:"twodigit",kind:"gold",badge:"🏆 PALIER LÉGENDAIRE",title:"2 CHIFFRES",sub:"Tu es passé sous les 100 kg.",text:"Ce n’est pas juste un nombre : c’est le cap psychologique qui change tout.",mini:"Mission69 vient de basculer."});
+  if(queue.length){
+    const v=queue[0];
+    if(v.id==="twodigit") state.ui.twoDigitCelebrated=true;
+    state.ui.celebratedVictories.push(v.id);
     save();
-    setTimeout(showCelebration, 250);
+    setTimeout(()=>showVictory(v),250);
   }
 }
+function showVictory(v){
+  const overlay=$("#victoryCelebration");
+  if(!overlay)return;
+  const card=$("#victoryCard");
+  card.className="celebration-card "+(v.kind||"gold");
+  $("#victoryBadge").textContent=v.badge;
+  $("#victoryTitle").textContent=v.title;
+  $("#victorySub").textContent=v.sub;
+  $("#victoryText").textContent=v.text;
+  $("#victoryMini").textContent=v.mini||"";
+  overlay.classList.add("open");
+}
 function showCelebration(){
-  const el=$("#twoDigitCelebration");
-  if(el) el.classList.add("open");
+  showVictory({kind:"gold",badge:"🏆 PALIER LÉGENDAIRE",title:"2 CHIFFRES",sub:"Tu es passé sous les 100 kg.",text:"Ce n’est pas juste un nombre : c’est le cap psychologique qui change tout.",mini:"Mission69 vient de basculer."});
 }
 function closeCelebration(){
-  const el=$("#twoDigitCelebration");
+  const el=$("#victoryCelebration");
   if(el) el.classList.remove("open");
 }
 
-function chartModal(){ return `<div class="modal" id="chartModal"><div class="sheet"><div class="row wrap"><div><h2 class="section-title">Courbe du poids</h2><p class="muted">Trait plein = mesures réelles. Pointillé = projection selon la tendance actuelle.</p></div><button class="btn" onclick="closeChart()">Fermer</button></div><div class="canvas-wrap big"><canvas id="bigWeightChart"></canvas></div></div></div>`; }
+function chartModal(){
+  return `<div class="modal" id="chartModal"><div class="sheet">
+    <div class="row wrap">
+      <div><h2 class="section-title">Courbe du poids détaillée</h2><p class="muted">Axe gauche = kg. Axe bas = dates réelles puis projection. Trait plein = mesures. Pointillé = projection.</p></div>
+      <button class="btn" onclick="closeChart()">Fermer</button>
+    </div>
+    <div class="canvas-wrap big"><canvas id="bigWeightChart"></canvas></div>
+  </div></div>`;
+}
 function openChart(){ $("#chartModal").classList.add("open"); requestAnimationFrame(drawAllCharts); }
 function closeChart(){ $("#chartModal").classList.remove("open"); }
 
 function drawAllCharts(){ drawWeight("weightChart",true); drawWeight("bigWeightChart",true); drawMed("medChart"); drawMeasurementsChart("measureChart"); }
 function setupCanvas(id){ const c=document.getElementById(id); if(!c)return null; const r=c.getBoundingClientRect(), dpr=devicePixelRatio||1; c.width=Math.max(1,Math.round(r.width*dpr)); c.height=Math.max(1,Math.round(r.height*dpr)); const ctx=c.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx,W:r.width,H:r.height}; }
-function drawWeight(id,proj){ const s=setupCanvas(id); if(!s)return; let pts=sorted("weights").map(w=>({v:Number(w.kg),real:true})); if(pts.length===1)pts.push({v:pts[0].v,real:true}); const rate=trendKgPerWeek()||.5; if(proj&&pts.length){ const last=pts.at(-1).v; for(let i=1;i<=24;i++)pts.push({v:Math.max(Number(state.profile.targetWeight),last-rate*i),real:false}); } drawLine(s.ctx,s.W,s.H,pts,{target:Number(state.profile.targetWeight),unit:"kg",split:pts.findIndex(p=>!p.real),xLabel:"Semaines"}); }
+function drawWeight(id,proj){
+  const s=setupCanvas(id); if(!s)return;
+  let pts=sorted("weights").map(w=>({v:Number(w.kg),date:w.date,real:true}));
+  if(pts.length===1)pts.push({v:pts[0].v,date:todayISO(),real:true});
+  const rate=trendKgPerWeek()||.5;
+  if(proj&&pts.length){
+    const last=pts.at(-1);
+    for(let i=1;i<=24;i++){
+      const d=parseLocalDate(last.date||todayISO());
+      d.setDate(d.getDate()+i*7);
+      pts.push({v:Math.max(Number(state.profile.targetWeight),last.v-rate*i),date:toISO(d),real:false});
+    }
+  }
+  drawWeightLine(s.ctx,s.W,s.H,pts,{target:Number(state.profile.targetWeight),big:id==="bigWeightChart"});
+}
+function drawWeightLine(ctx,W,H,pts,opt){
+  if(!pts.length)return;
+  const padL=opt.big?74:46, padR=opt.big?34:18, padT=opt.big?38:24, padB=opt.big?64:38;
+  const vals=pts.map(p=>p.v).concat([opt.target, Number(state.profile.startWeight)||pts[0].v]);
+  const rawMin=Math.min(...vals), rawMax=Math.max(...vals);
+  const step=opt.big?2:5;
+  const min=Math.floor((rawMin-1)/step)*step;
+  const max=Math.ceil((rawMax+1)/step)*step;
+  const sx=i=>padL+(i/Math.max(1,pts.length-1))*(W-padL-padR);
+  const sy=v=>padT+(1-(v-min)/Math.max(1,max-min))*(H-padT-padB);
+  ctx.clearRect(0,0,W,H);
+
+  ctx.fillStyle="rgba(255,255,255,.78)";
+  ctx.font=(opt.big?"800 13px":"800 11px")+" -apple-system,BlinkMacSystemFont,Arial";
+
+  const tickCount=opt.big?8:4;
+  ctx.strokeStyle="rgba(255,255,255,.11)";
+  ctx.lineWidth=1;
+  for(let i=0;i<=tickCount;i++){
+    const value=min+(max-min)*i/tickCount;
+    const y=sy(value);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+    ctx.fillText(value.toFixed(1)+" kg", opt.big?12:4, y+4);
+  }
+
+  const targetY=sy(opt.target);
+  ctx.strokeStyle="rgba(255,198,110,.72)";
+  ctx.setLineDash([7,7]);
+  ctx.beginPath(); ctx.moveTo(padL,targetY); ctx.lineTo(W-padR,targetY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle="rgba(255,226,174,.95)";
+  ctx.fillText("objectif "+opt.target+" kg", Math.max(padL, W-padR-120), targetY-8);
+
+  const realEnd=pts.findIndex(p=>!p.real);
+  const split=realEnd>0?realEnd:pts.length;
+  const real=pts.slice(0,split), fut=pts.slice(split);
+
+  ctx.lineWidth=opt.big?5:4;
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.strokeStyle="#78ffd6";
+  ctx.beginPath();
+  real.forEach((p,i)=>i?ctx.lineTo(sx(i),sy(p.v)):ctx.moveTo(sx(i),sy(p.v)));
+  ctx.stroke();
+
+  if(fut.length){
+    ctx.strokeStyle="rgba(131,166,255,.72)";
+    ctx.setLineDash([10,9]);
+    ctx.beginPath();
+    ctx.moveTo(sx(real.length-1),sy(real.at(-1).v));
+    fut.forEach((p,j)=>ctx.lineTo(sx(real.length+j),sy(p.v)));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.fillStyle="#fff";
+  real.forEach((p,i)=>{ctx.beginPath();ctx.arc(sx(i),sy(p.v),opt.big?5.5:4.5,0,Math.PI*2);ctx.fill();});
+
+  ctx.fillStyle="rgba(255,255,255,.72)";
+  ctx.font=(opt.big?"800 12px":"800 10px")+" -apple-system,BlinkMacSystemFont,Arial";
+  const xTicks=opt.big?[0,Math.floor((pts.length-1)*.25),Math.floor((pts.length-1)*.5),Math.floor((pts.length-1)*.75),pts.length-1]:[0,Math.floor((pts.length-1)/2),pts.length-1];
+  [...new Set(xTicks)].forEach(i=>{
+    const p=pts[i]; if(!p)return;
+    const x=sx(i);
+    ctx.beginPath(); ctx.moveTo(x,H-padB); ctx.lineTo(x,H-padB+6); ctx.strokeStyle="rgba(255,255,255,.20)"; ctx.stroke();
+    const label=opt.big?fmtShort(p.date):(p.real?fmtShort(p.date):"+"+Math.round(i-real.length+1)+"s");
+    ctx.fillText(label, Math.max(4, Math.min(W-78, x-28)), H-(opt.big?26:14));
+  });
+
+  if(opt.big){
+    ctx.fillStyle="rgba(255,255,255,.88)";
+    ctx.font="900 14px -apple-system,BlinkMacSystemFont,Arial";
+    ctx.fillText("Poids en kg", padL, 18);
+    ctx.fillStyle="#78ffd6";
+    ctx.fillText("● mesures réelles", padL+115, 18);
+    ctx.fillStyle="rgba(131,166,255,.9)";
+    ctx.fillText("— projection", padL+250, 18);
+  }
+}
 function drawMed(id){
   const s=setupCanvas(id); if(!s)return; const {ctx,W,H}=s, pad=38, now=Date.now(), pts=[]; for(let i=0;i<=42;i++)pts.push({x:i,v:medLevelAt(now+i*86400000,true)});
   ctx.clearRect(0,0,W,H);

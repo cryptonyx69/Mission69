@@ -1,7 +1,7 @@
 {
-  "name": "Mission69 Nova",
+  "name": "Mission69 v1.08",
   "short_name": "Mission69",
-  "description": "Suivi Wegovy manuel, simple, graphique et entièrement modifiable.",
+  "description": "Suivi Wegovy manuel, version 1.08.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
