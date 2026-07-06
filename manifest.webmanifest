@@ -1,7 +1,7 @@
 {
   "name": "Mission69 Nova",
   "short_name": "Mission69",
-  "description": "Suivi Wegovy simple, beau et manuel.",
+  "description": "Suivi Wegovy manuel, simple, graphique et entièrement modifiable.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
