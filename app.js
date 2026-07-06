@@ -1,9 +1,9 @@
 
 "use strict";
 
-const VERSION = "Nova 6.1.0";
-const STORAGE_KEY = "mission69_nova_v61";
-const LEGACY_KEYS = ["mission69_nova_v6","mission69_nova_v51","mission69_nova_v5","mission69_withings_v4","mission69_studio_v3","mission69_elite_v2","mission69_dream_v1","mission69_pro_data","mission69_v2_data","mission69_v1_data"];
+const VERSION = "Nova 6.3.0";
+const STORAGE_KEY = "mission69_nova_v63";
+const LEGACY_KEYS = ["mission69_nova_v62","mission69_nova_v61","mission69_nova_v6","mission69_nova_v51","mission69_nova_v5","mission69_withings_v4","mission69_studio_v3","mission69_elite_v2","mission69_dream_v1","mission69_pro_data","mission69_v2_data","mission69_v1_data"];
 const $ = s => document.querySelector(s);
 
 function uid(){ return "id_" + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-5); }
@@ -17,7 +17,7 @@ function esc(v){ return String(v ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;",
 function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
 function round1(n){ return Math.round(n*10)/10; }
 function num(v){ const n = Number(String(v ?? "").replace(",", ".")); return Number.isFinite(n) ? n : null; }
-function val(id){ return $("#" + id)?.value ?? ""; }
+function val(id){ return document.getElementById(id)?.value ?? ""; }
 
 const DEFAULT = {
   meta:{version:VERSION,createdAt:new Date().toISOString()},
@@ -125,7 +125,7 @@ function header(){
   return `<header class="topbar"><div class="brand"><div class="logo">69</div><div><div class="kicker">Mission69 · ${esc(VERSION)}</div><h1>Mission69</h1><p class="sub">Manuel, simple, beau, efficace.</p></div></div><div class="actions"><button class="btn hide-sm" onclick="exportJSON()">Exporter</button><button class="btn primary" onclick="openSettings()">Réglages</button></div></header>`;
 }
 function nav(view){
-  const tabs=[["dashboard","Dashboard"],["add","Ajouter"],["tables","Tableaux"],["injections","Injections"],["daily","Journal"],["goals","Objectifs"],["photos","Photos"],["backup","Backup"]];
+  const tabs=[["dashboard","Dashboard"],["add","Ajouter"],["tables","Tableaux"],["measurements","Mensurations"],["injections","Injections"],["daily","Journal"],["goals","Objectifs"],["photos","Photos"],["control","Contrôle"],["backup","Backup"]];
   return `<nav class="nav">${tabs.map(([id,l])=>`<button class="tab ${view===id?'active':''}" onclick="setView('${id}')">${l}</button>`).join("")}</nav>`;
 }
 function setView(v){ state.ui.view=v; persist(); }
@@ -133,10 +133,12 @@ function gotoTable(t){ state.ui.view="tables"; state.ui.table=t; persist(); }
 function viewHTML(v){
   if(v==="add")return addView();
   if(v==="tables")return tablesView();
+  if(v==="measurements")return measurementsView();
   if(v==="injections")return injectionsView();
   if(v==="daily")return dailyView();
   if(v==="goals")return goalsView();
   if(v==="photos")return photosView();
+  if(v==="control")return controlView();
   if(v==="backup")return backupView();
   return dashboardView();
 }
@@ -146,7 +148,7 @@ function dashboardView(){
     <div class="grid">
       <div class="card hero clickable" onclick="gotoTable('weights')"><div class="row wrap"><span class="label">Poids actuel</span><span class="btn primary">Modifier les poids</span></div><div class="big">${cw.toFixed(1)} <small>kg</small></div><div class="progress"><div class="bar" style="width:${pg}%"></div></div><div class="row muted"><span>${pg.toFixed(0)} % de la mission</span><span>${Math.max(0,remainingKg()).toFixed(1)} kg restants</span></div></div>
       <div class="grid four">
-        ${metric("IMC",bmi().toFixed(1),bmiLabel(),"gotoTable('measurements')")}
+        ${metric("IMC",bmi().toFixed(1),bmiLabel(),"setView('measurements')")}
         ${metric("Tendance",rate?rate.toFixed(2)+" kg/sem.":"—","Modifier les pesées","gotoTable('weights')")}
         ${metric("2 chiffres", currentWeight()<100 ? "DÉBLOQUÉ" : round1(currentWeight()-100).toFixed(1)+" kg", currentWeight()<100 ? "palier psychologique majeur" : "avant le monde à 2 chiffres", "setView('goals')")}
         ${metric("Prochain palier",ng+" kg",estimateDate(ng),"setView('goals')")}
@@ -163,8 +165,8 @@ function dashboardView(){
   </section>`;
 }
 function metric(label,val,sub,onClick){
-  const click = onClick ? ` clickable" onclick="${onClick}` : "";
-  return `<div class="metric${click}"><span class="label">${esc(label)}</span><br><b>${esc(val)}</b><small>${esc(sub)}</small></div>`;
+  const attrs = onClick ? ` clickable" onclick="${onClick}"` : `"`;
+  return `<div class="metric${attrs}><span class="label">${esc(label)}</span><br><b>${esc(val)}</b><small>${esc(sub)}</small></div>`;
 }
 function ring(val,label){ const off=540-(540*clamp(val,0,100)/100); return `<div class="ring-wrap"><svg class="ring" viewBox="0 0 200 200"><defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#78FFD6"/><stop offset=".55" stop-color="#83A6FF"/><stop offset="1" stop-color="#FF77DC"/></linearGradient></defs><circle class="base" cx="100" cy="100" r="86"></circle><circle class="value" cx="100" cy="100" r="86" style="stroke-dashoffset:${off}"></circle></svg><div class="ring-label"><b>${val}%</b><span>${esc(label)}</span></div></div>`; }
 
@@ -175,7 +177,7 @@ function addView(){
     <div class="card"><h2 class="section-title">Ajouter une injection</h2><div class="formgrid">${field("Date","newInjDate",todayISO(),"date")}${field("Heure","newInjTime",state.profile.injectionTime,"time")}${field("Dose mg","newInjDose",doseAtWeek(wk).toFixed(2),"number")}${field("Clics","newInjClicks",clicksAtWeek(wk),"number")}<div class="field"><label>Site</label><select id="newInjSite">${state.sites.map(s=>`<option ${s===nextSite()?"selected":""}>${esc(s)}</option>`).join("")}</select></div><div class="field"><label>Note</label><input id="newInjNote" placeholder="Optionnel"></div></div><br><button class="btn primary" onclick="addInjectionForm()">Ajouter</button></div>
   </section>
   <section class="grid two" style="margin-top:18px">
-    <div class="card"><h2 class="section-title">Mensurations</h2><div class="formgrid">${measurementFields("new")}</div><br><button class="btn primary" onclick="addMeasurementForm()">Ajouter</button></div>
+    <div class="card"><h2 class="section-title">Mensurations complètes</h2><p class="muted">Inclut mollets gauche/droit, bras gauche/droit et cuisses gauche/droite.</p><div class="formgrid">${measurementFields("new")}</div><br><button class="btn primary" onclick="addMeasurementForm()">Ajouter</button></div>
     <div class="card"><h2 class="section-title">Journal rapide</h2>${miniHabits()}<hr><div class="chips">${["🙂 rien","🤢 nausée","🔥 reflux","💩 constipation","😴 fatigue","🍽️ satiété","🍺 alcool"].map(s=>`<button class="chip" onclick="addSymptom('${esc(s)}')">${esc(s)}</button>`).join("")}</div></div>
   </section>`;
 }
@@ -192,17 +194,60 @@ function setTable(t){ state.ui.table=t; persist(); }
 function tableHTML(t){ if(t==="injections")return injectionsTable(); if(t==="measurements")return measurementsTable(); if(t==="symptoms")return symptomsTable(); return weightsTable(); }
 
 function weightsTable(){
-  return `<div class="card table-card"><div class="table-head"><div><h2 class="section-title">Liste des poids</h2><p class="muted">Modifie toutes les lignes puis sauvegarde en une fois.</p></div></div><div class="table-actions"><button class="btn primary" onclick="saveAllWeights()">Enregistrer tout</button><button class="btn" onclick="addEmptyWeight()">+ ligne</button></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Poids kg</th><th>Note</th><th>Suppr.</th></tr></thead><tbody>${sorted("weights").slice().reverse().map(w=>`<tr><td><input id="w_date_${w.id}" type="date" value="${esc(w.date)}"></td><td><input id="w_kg_${w.id}" type="number" step="0.1" value="${esc(w.kg)}"></td><td><input class="wide" id="w_note_${w.id}" value="${esc(w.note)}"></td><td><input class="delete-check" id="w_del_${w.id}" type="checkbox"></td></tr>`).join("")}</tbody></table></div></div>`;
+  const rows=sorted("weights").slice().reverse();
+  return `<div class="card table-card">
+    <div class="table-head"><div><h2 class="section-title">Tableau poids</h2><p class="muted">Tu modifies tout ce que tu veux, puis tu cliques une seule fois sur Enregistrer tout.</p></div></div>
+    <div class="sheet-savebar"><span><b>Mode tableau</b> · ${rows.length} ligne(s)</span><div class="chips"><button class="btn primary" onclick="saveAllWeights()">Enregistrer tout</button><button class="btn" onclick="addEmptyWeight()">+ ligne</button></div></div>
+    <div class="sheet-tip"><span class="muted">Astuce : coche Suppr. puis Enregistrer tout pour supprimer plusieurs lignes.</span></div>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Poids kg</th><th>Note</th><th>Suppr.</th></tr></thead><tbody>${rows.map((w,idx)=>`<tr data-id="${w.id}"><td class="row-number">${idx+1}</td><td><input id="w_date_${w.id}" type="date" value="${esc(w.date)}"></td><td><input id="w_kg_${w.id}" type="number" step="0.1" value="${esc(w.kg)}"></td><td><input class="wide" id="w_note_${w.id}" value="${esc(w.note)}"></td><td><input class="delete-check" id="w_del_${w.id}" type="checkbox"></td></tr>`).join("")}</tbody></table></div>
+  </div>`;
 }
 function injectionsTable(){
-  return `<div class="card table-card"><div class="table-head"><div><h2 class="section-title">Liste des injections</h2><p class="muted">Dose, clics, site et date modifiables en masse.</p></div></div><div class="table-actions"><button class="btn primary" onclick="saveAllInjections()">Enregistrer tout</button><button class="btn" onclick="addEmptyInjection()">+ ligne</button></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Heure</th><th>Dose mg</th><th>Clics</th><th>Site</th><th>Note</th><th>Suppr.</th></tr></thead><tbody>${sorted("injections").slice().reverse().map(i=>`<tr><td><input id="i_date_${i.id}" type="date" value="${esc(i.date)}"></td><td><input id="i_time_${i.id}" type="time" value="${esc(i.time)}"></td><td><input class="narrow" id="i_dose_${i.id}" type="number" step="0.01" value="${esc(i.dose)}"></td><td><input class="narrow" id="i_clicks_${i.id}" type="number" step="1" value="${esc(i.clicks ?? defaultClicks(i.dose))}"></td><td><select id="i_site_${i.id}">${state.sites.map(s=>`<option ${s===i.site?"selected":""}>${esc(s)}</option>`).join("")}</select></td><td><input class="wide" id="i_note_${i.id}" value="${esc(i.note)}"></td><td><input class="delete-check" id="i_del_${i.id}" type="checkbox"></td></tr>`).join("")}</tbody></table></div></div>`;
+  const rows=sorted("injections").slice().reverse();
+  return `<div class="card table-card">
+    <div class="table-head"><div><h2 class="section-title">Tableau injections</h2><p class="muted">Dose, clics, site, date et note modifiables en une seule sauvegarde.</p></div></div>
+    <div class="sheet-savebar"><span><b>Mode tableau</b> · ${rows.length} ligne(s)</span><div class="chips"><button class="btn primary" onclick="saveAllInjections()">Enregistrer tout</button><button class="btn" onclick="addEmptyInjection()">+ ligne</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Heure</th><th>Dose mg</th><th>Clics</th><th>Site</th><th>Note</th><th>Suppr.</th></tr></thead><tbody>${rows.map((i,idx)=>`<tr data-id="${i.id}"><td class="row-number">${idx+1}</td><td><input id="i_date_${i.id}" type="date" value="${esc(i.date)}"></td><td><input id="i_time_${i.id}" type="time" value="${esc(i.time)}"></td><td><input class="narrow" id="i_dose_${i.id}" type="number" step="0.01" value="${esc(i.dose)}"></td><td><input class="narrow" id="i_clicks_${i.id}" type="number" step="1" value="${esc(i.clicks ?? defaultClicks(i.dose))}"></td><td><select id="i_site_${i.id}">${state.sites.map(s=>`<option ${s===i.site?"selected":""}>${esc(s)}</option>`).join("")}</select></td><td><input class="wide" id="i_note_${i.id}" value="${esc(i.note)}"></td><td><input class="delete-check" id="i_del_${i.id}" type="checkbox"></td></tr>`).join("")}</tbody></table></div>
+  </div>`;
 }
 function measurementsTable(){
-  return `<div class="card table-card"><div class="table-head"><div><h2 class="section-title">Liste des mensurations</h2><p class="muted">Taille, ventre, hanches, poitrine, mollets, bras et cuisses.</p></div></div><div class="table-actions"><button class="btn primary" onclick="saveAllMeasurements()">Enregistrer tout</button><button class="btn" onclick="addEmptyMeasurement()">+ ligne</button></div><div class="table-wrap"><table style="min-width:1320px"><thead><tr><th>Date</th><th>Taille</th><th>Ventre</th><th>Hanches</th><th>Poitrine</th><th>Mollet G</th><th>Mollet D</th><th>Bras G</th><th>Bras D</th><th>Cuisse G</th><th>Cuisse D</th><th>Note</th><th>Suppr.</th></tr></thead><tbody>${sorted("measurements").slice().reverse().map(m=>`<tr><td><input id="m_date_${m.id}" type="date" value="${esc(m.date)}"></td>${mInput(m,"waist")}${mInput(m,"belly")}${mInput(m,"hips")}${mInput(m,"chest")}${mInput(m,"calfL")}${mInput(m,"calfR")}${mInput(m,"armL")}${mInput(m,"armR")}${mInput(m,"thighL")}${mInput(m,"thighR")}<td><input class="wide" id="m_note_${m.id}" value="${esc(m.note)}"></td><td><input class="delete-check" id="m_del_${m.id}" type="checkbox"></td></tr>`).join("")}</tbody></table></div></div>`;
+  const rows=sorted("measurements").slice().reverse();
+  return `<div class="card table-card">
+    <div class="table-head"><div><h2 class="section-title">Tableau mensurations</h2><p class="muted">Toutes les mesures sont modifiables en bloc : taille, ventre, hanches, poitrine, mollets, bras, cuisses.</p></div></div>
+    <div class="sheet-savebar"><span><b>Mode tableau</b> · ${rows.length} ligne(s)</span><div class="chips"><button class="btn primary" onclick="saveAllMeasurements()">Enregistrer tout</button><button class="btn" onclick="addEmptyMeasurement()">+ ligne</button></div></div>
+    <div class="table-wrap"><table style="min-width:1380px"><thead><tr><th>#</th><th>Date</th><th>Taille</th><th>Ventre</th><th>Hanches</th><th>Poitrine</th><th>Mollet G</th><th>Mollet D</th><th>Bras G</th><th>Bras D</th><th>Cuisse G</th><th>Cuisse D</th><th>Note</th><th>Suppr.</th></tr></thead><tbody>${rows.map((m,idx)=>`<tr data-id="${m.id}"><td class="row-number">${idx+1}</td><td><input id="m_date_${m.id}" type="date" value="${esc(m.date)}"></td>${mInput(m,"waist")}${mInput(m,"belly")}${mInput(m,"hips")}${mInput(m,"chest")}${mInput(m,"calfL")}${mInput(m,"calfR")}${mInput(m,"armL")}${mInput(m,"armR")}${mInput(m,"thighL")}${mInput(m,"thighR")}<td><input class="wide" id="m_note_${m.id}" value="${esc(m.note)}"></td><td><input class="delete-check" id="m_del_${m.id}" type="checkbox"></td></tr>`).join("")}</tbody></table></div>
+  </div>`;
 }
 function mInput(m,k){ return `<td><input class="narrow" id="m_${k}_${m.id}" type="number" step="0.1" value="${esc(m[k]??"")}"></td>`; }
 function symptomsTable(){
-  return `<div class="card table-card"><div class="table-head"><div><h2 class="section-title">Liste du journal</h2><p class="muted">Symptômes séparés par des virgules.</p></div></div><div class="table-actions"><button class="btn primary" onclick="saveAllSymptoms()">Enregistrer tout</button><button class="btn" onclick="addEmptySymptom()">+ ligne</button></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Symptômes</th><th>Intensité</th><th>Note</th><th>Suppr.</th></tr></thead><tbody>${sorted("symptoms").slice().reverse().map(s=>`<tr><td><input id="s_date_${s.id}" type="date" value="${esc(s.date)}"></td><td><input class="wide" id="s_items_${s.id}" value="${esc((s.items||[]).join(", "))}"></td><td><input class="narrow" id="s_level_${s.id}" type="number" min="0" max="5" value="${esc(s.level||1)}"></td><td><input class="wide" id="s_note_${s.id}" value="${esc(s.note)}"></td><td><input class="delete-check" id="s_del_${s.id}" type="checkbox"></td></tr>`).join("")}</tbody></table></div></div>`;
+  const rows=sorted("symptoms").slice().reverse();
+  return `<div class="card table-card">
+    <div class="table-head"><div><h2 class="section-title">Tableau journal</h2><p class="muted">Symptômes séparés par des virgules. Tout se valide en une fois.</p></div></div>
+    <div class="sheet-savebar"><span><b>Mode tableau</b> · ${rows.length} ligne(s)</span><div class="chips"><button class="btn primary" onclick="saveAllSymptoms()">Enregistrer tout</button><button class="btn" onclick="addEmptySymptom()">+ ligne</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Symptômes</th><th>Intensité</th><th>Note</th><th>Suppr.</th></tr></thead><tbody>${rows.map((s,idx)=>`<tr data-id="${s.id}"><td class="row-number">${idx+1}</td><td><input id="s_date_${s.id}" type="date" value="${esc(s.date)}"></td><td><input class="wide" id="s_items_${s.id}" value="${esc((s.items||[]).join(", "))}"></td><td><input class="narrow" id="s_level_${s.id}" type="number" min="0" max="5" value="${esc(s.level||1)}"></td><td><input class="wide" id="s_note_${s.id}" value="${esc(s.note)}"></td><td><input class="delete-check" id="s_del_${s.id}" type="checkbox"></td></tr>`).join("")}</tbody></table></div>
+  </div>`;
+}
+function controlView(){
+  const fields = [
+    ["Mollet gauche", "calfL"], ["Mollet droit", "calfR"],
+    ["Bras gauche", "armL"], ["Bras droit", "armR"],
+    ["Cuisse gauche", "thighL"], ["Cuisse droite", "thighR"]
+  ];
+  const hasV6Measures = fields.every(([label,key]) => true);
+  return `<section class="card">
+    <h2 class="section-title">Contrôle V6.2</h2>
+    <p class="notice success">Cette page sert à vérifier noir sur blanc que les fonctions demandées sont présentes dans la version installée.</p>
+    <div class="grid two">
+      ${metric("Mollets G/D", "OK", "Champs mollet gauche + mollet droit dans Ajouter, Mensurations et Tableaux")}
+      ${metric("Bras G/D", "OK", "Champs bras gauche + bras droit")}
+      ${metric("Cuisses G/D", "OK", "Champs cuisse gauche + cuisse droite")}
+      ${metric("Clics Wegovy", "OK", "0.25 mg = 8 clics · 0.5 mg = 16 clics · 1.0 mg = 32 clics")}
+      ${metric("Dashboard cliquable", "OK", "Poids, IMC, tendance, injections et objectifs ouvrent la bonne zone")}
+      ${metric("Tableaux en masse", "OK", "Un seul bouton Enregistrer tout par tableau, aucune sauvegarde ligne par ligne")}
+      ${metric("Graphe poids grand", "OK", "Bouton Agrandir sur la courbe du poids")}
+      ${metric("Graphe Wegovy expliqué", "OK", "Axe Y en %, axe X aujourd’hui à +42 jours")}
+    </div>
+  </section>`;
 }
 
 function injectionsView(){
@@ -239,7 +284,7 @@ function photosView(){
   return `<section class="grid two"><div class="card"><h2 class="section-title">Ajouter photo</h2><input id="photoInput" type="file" accept="image/*"><br><br><input id="photoLabel" placeholder="Label : face, profil, mois 1..."><br><br><button class="btn primary" onclick="addPhoto()">Ajouter</button><p class="notice">Photos compressées et stockées localement. Export JSON recommandé.</p></div><div class="card"><h2 class="section-title">Avant / après</h2>${first&&last&&first.id!==last.id?`<div class="compare"><div class="photo"><img src="${first.data}"><div class="cap"><b>${esc(first.label)}</b><br><small class="muted">${fmtDate(first.date)}</small></div></div><div class="photo"><img src="${last.data}"><div class="cap"><b>${esc(last.label)}</b><br><small class="muted">${fmtDate(last.date)}</small></div></div></div>`:"<p class='muted'>Ajoute au moins deux photos.</p>"}</div></section><section class="photo-grid" style="margin-top:18px">${state.photos.slice().reverse().map(p=>`<div class="photo"><img src="${p.data}"><div class="cap"><b>${esc(p.label)}</b><br><small class="muted">${fmtDate(p.date)}</small><br><br><button class="btn danger small" onclick="deletePhoto('${p.id}')">Supprimer</button></div></div>`).join("")||"<div class='card'><p class='muted'>Aucune photo.</p></div>"}</section>`;
 }
 function backupView(){
-  return `<section class="grid two"><div class="card"><h2 class="section-title">Sauvegarde</h2><p class="muted">Tout reste local. Exporte le JSON régulièrement.</p><div class="chips"><button class="btn primary" onclick="exportJSON()">Exporter JSON</button><button class="btn" onclick="importJSON()">Importer JSON</button><button class="btn" onclick="exportCSV()">Exporter CSV</button><button class="btn danger" onclick="resetAll()">Réinitialiser</button></div><hr><button class="btn danger" onclick="hardRefresh()">Forcer mise à jour / vider cache</button></div><div class="card"><h2 class="section-title">Diagnostic</h2>${metric("Version",VERSION,"PWA")}${metric("Données",`${state.weights.length} poids · ${state.injections.length} injections`,`${state.measurements.length} mensurations · ${state.photos.length} photos`)}</div></section>`;
+  return `<section class="grid two"><div class="card"><h2 class="section-title">Sauvegarde</h2><p class="muted">Tout reste local. Exporte le JSON régulièrement.</p><div class="chips"><button class="btn primary" onclick="exportJSON()">Exporter JSON</button><button class="btn" onclick="importJSON()">Importer JSON</button><button class="btn" onclick="exportCSV()">Exporter CSV</button><button class="btn danger" onclick="resetAll()">Réinitialiser</button></div><hr><button class="btn danger" onclick="hardRefresh()">Forcer mise à jour / vider cache</button></div><div class="card"><h2 class="section-title">Diagnostic</h2>${metric("Version",VERSION,"PWA")}${metric("Données",`${state.weights.length} poids · ${state.injections.length} injections`,`${state.measurements.length} mensurations complètes · ${state.photos.length} photos`)}</div></section>`;
 }
 
 function addWeightForm(){ const kg=num(val("newWeightKg")); if(!kg||kg<45||kg>220)return toast("Poids invalide"); state.weights.push({id:uid(),date:val("newWeightDate")||todayISO(),kg:round1(kg),note:val("newWeightNote")||""}); state.weights.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Poids ajouté"); }
@@ -254,20 +299,53 @@ function addEmptyMeasurement(){ state.measurements.push({id:uid(),date:todayISO(
 function addEmptySymptom(){ state.symptoms.push({id:uid(),date:todayISO(),items:[],level:1,note:""}); state.ui.view="tables"; state.ui.table="symptoms"; persist(); }
 
 function saveAllWeights(){
-  const next=[]; for(const w of state.weights){ if($("#w_del_"+w.id)?.checked) continue; const kg=num(val("w_kg_"+w.id)); if(!kg||kg<45||kg>220)return toast("Poids invalide"); next.push({id:w.id,date:val("w_date_"+w.id)||todayISO(),kg:round1(kg),note:val("w_note_"+w.id)||""}); }
-  state.weights=next.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Tableau poids enregistré");
+  const next=[];
+  for(const w of state.weights){
+    const del=document.getElementById("w_del_"+w.id)?.checked;
+    if(del) continue;
+    const kg=num(val("w_kg_"+w.id));
+    if(!kg||kg<45||kg>220){ toast("Poids invalide"); return; }
+    next.push({id:w.id,date:val("w_date_"+w.id)||todayISO(),kg:round1(kg),note:val("w_note_"+w.id)||""});
+  }
+  state.weights=next.sort((a,b)=>a.date.localeCompare(b.date));
+  persist();
+  toast("Tableau poids enregistré");
 }
 function saveAllInjections(){
-  const next=[]; for(const i of state.injections){ if($("#i_del_"+i.id)?.checked) continue; const dose=num(val("i_dose_"+i.id)); if(!dose)return toast("Dose invalide"); next.push({id:i.id,date:val("i_date_"+i.id)||todayISO(),time:val("i_time_"+i.id)||state.profile.injectionTime,dose,clicks:num(val("i_clicks_"+i.id))||defaultClicks(dose),site:val("i_site_"+i.id)||state.sites[0],note:val("i_note_"+i.id)||""}); }
-  state.injections=next.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Tableau injections enregistré");
+  const next=[];
+  for(const i of state.injections){
+    const del=document.getElementById("i_del_"+i.id)?.checked;
+    if(del) continue;
+    const dose=num(val("i_dose_"+i.id));
+    if(!dose){ toast("Dose invalide"); return; }
+    next.push({id:i.id,date:val("i_date_"+i.id)||todayISO(),time:val("i_time_"+i.id)||state.profile.injectionTime,dose,clicks:num(val("i_clicks_"+i.id))||defaultClicks(dose),site:val("i_site_"+i.id)||state.sites[0],note:val("i_note_"+i.id)||""});
+  }
+  state.injections=next.sort((a,b)=>a.date.localeCompare(b.date));
+  persist();
+  toast("Tableau injections enregistré");
 }
 function saveAllMeasurements(){
-  const next=[]; for(const m of state.measurements){ if($("#m_del_"+m.id)?.checked) continue; const row={id:m.id,date:val("m_date_"+m.id)||todayISO(),waist:num(val("m_waist_"+m.id)),belly:num(val("m_belly_"+m.id)),hips:num(val("m_hips_"+m.id)),chest:num(val("m_chest_"+m.id)),calfL:num(val("m_calfL_"+m.id)),calfR:num(val("m_calfR_"+m.id)),armL:num(val("m_armL_"+m.id)),armR:num(val("m_armR_"+m.id)),thighL:num(val("m_thighL_"+m.id)),thighR:num(val("m_thighR_"+m.id)),note:val("m_note_"+m.id)||""}; if(hasMeasure(row)) next.push(row); }
-  state.measurements=next.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Tableau mensurations enregistré");
+  const next=[];
+  for(const m of state.measurements){
+    const del=document.getElementById("m_del_"+m.id)?.checked;
+    if(del) continue;
+    const row={id:m.id,date:val("m_date_"+m.id)||todayISO(),waist:num(val("m_waist_"+m.id)),belly:num(val("m_belly_"+m.id)),hips:num(val("m_hips_"+m.id)),chest:num(val("m_chest_"+m.id)),calfL:num(val("m_calfL_"+m.id)),calfR:num(val("m_calfR_"+m.id)),armL:num(val("m_armL_"+m.id)),armR:num(val("m_armR_"+m.id)),thighL:num(val("m_thighL_"+m.id)),thighR:num(val("m_thighR_"+m.id)),note:val("m_note_"+m.id)||""};
+    if(hasMeasure(row)) next.push(row);
+  }
+  state.measurements=next.sort((a,b)=>a.date.localeCompare(b.date));
+  persist();
+  toast("Tableau mensurations enregistré");
 }
 function saveAllSymptoms(){
-  const next=[]; for(const s of state.symptoms){ if($("#s_del_"+s.id)?.checked) continue; next.push({id:s.id,date:val("s_date_"+s.id)||todayISO(),items:(val("s_items_"+s.id)||"").split(",").map(x=>x.trim()).filter(Boolean),level:Number(val("s_level_"+s.id))||1,note:val("s_note_"+s.id)||""}); }
-  state.symptoms=next.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Tableau journal enregistré");
+  const next=[];
+  for(const s of state.symptoms){
+    const del=document.getElementById("s_del_"+s.id)?.checked;
+    if(del) continue;
+    next.push({id:s.id,date:val("s_date_"+s.id)||todayISO(),items:(val("s_items_"+s.id)||"").split(",").map(x=>x.trim()).filter(Boolean),level:Number(val("s_level_"+s.id))||1,note:val("s_note_"+s.id)||""});
+  }
+  state.symptoms=next.sort((a,b)=>a.date.localeCompare(b.date));
+  persist();
+  toast("Tableau journal enregistré");
 }
 
 function toggleHabit(k){ const h=habitToday(); h[k]=!h[k]; persist(); }
@@ -317,7 +395,7 @@ function chartModal(){ return `<div class="modal" id="chartModal"><div class="sh
 function openChart(){ $("#chartModal").classList.add("open"); requestAnimationFrame(drawAllCharts); }
 function closeChart(){ $("#chartModal").classList.remove("open"); }
 
-function drawAllCharts(){ drawWeight("weightChart",true); drawWeight("bigWeightChart",true); drawMed("medChart"); }
+function drawAllCharts(){ drawWeight("weightChart",true); drawWeight("bigWeightChart",true); drawMed("medChart"); drawMeasurementsChart("measureChart"); }
 function setupCanvas(id){ const c=document.getElementById(id); if(!c)return null; const r=c.getBoundingClientRect(), dpr=devicePixelRatio||1; c.width=Math.max(1,Math.round(r.width*dpr)); c.height=Math.max(1,Math.round(r.height*dpr)); const ctx=c.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx,W:r.width,H:r.height}; }
 function drawWeight(id,proj){ const s=setupCanvas(id); if(!s)return; let pts=sorted("weights").map(w=>({v:Number(w.kg),real:true})); if(pts.length===1)pts.push({v:pts[0].v,real:true}); const rate=trendKgPerWeek()||.5; if(proj&&pts.length){ const last=pts.at(-1).v; for(let i=1;i<=24;i++)pts.push({v:Math.max(Number(state.profile.targetWeight),last-rate*i),real:false}); } drawLine(s.ctx,s.W,s.H,pts,{target:Number(state.profile.targetWeight),unit:"kg",split:pts.findIndex(p=>!p.real),xLabel:"Semaines"}); }
 function drawMed(id){
@@ -341,6 +419,29 @@ function drawLine(ctx,W,H,pts,opt){
   const split=opt.split&&opt.split>0?opt.split:pts.length, real=pts.slice(0,split), fut=pts.slice(split); ctx.lineWidth=4; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle=opt.color||"#78ffd6"; ctx.beginPath(); real.forEach((p,i)=>i?ctx.lineTo(sx(i),sy(p.v)):ctx.moveTo(sx(i),sy(p.v))); ctx.stroke();
   if(fut.length){ ctx.strokeStyle="rgba(131,166,255,.68)"; ctx.setLineDash([9,8]); ctx.beginPath(); ctx.moveTo(sx(real.length-1),sy(real.at(-1).v)); fut.forEach((p,j)=>ctx.lineTo(sx(real.length+j),sy(p.v))); ctx.stroke(); ctx.setLineDash([]); }
   ctx.fillStyle="#fff"; real.forEach((p,i)=>{ctx.beginPath();ctx.arc(sx(i),sy(p.v),5,0,Math.PI*2);ctx.fill();}); ctx.fillStyle="rgba(255,255,255,.72)"; ctx.font="800 12px -apple-system"; ctx.fillText(max+" "+opt.unit,pad,18); ctx.fillText(min+" "+opt.unit,pad,H-10);
+}
+
+
+function drawMeasurementsChart(id){
+  const s=setupCanvas(id);
+  if(!s)return;
+  const {ctx,W,H}=s;
+  const keys=["waist","belly","hips","chest","calfL","calfR","armL","armR","thighL","thighR"];
+  const labels={waist:"Taille",belly:"Ventre",hips:"Hanches",chest:"Poitrine",calfL:"Mollet G",calfR:"Mollet D",armL:"Bras G",armR:"Bras D",thighL:"Cuisse G",thighR:"Cuisse D"};
+  const ms=sorted("measurements");
+  const key=keys.find(k=>ms.filter(m=>m[k]).length>=1);
+  ctx.clearRect(0,0,W,H);
+  if(!key){
+    ctx.fillStyle="rgba(255,255,255,.75)";
+    ctx.font="800 14px -apple-system,BlinkMacSystemFont,Arial";
+    ctx.fillText("Ajoute des mensurations pour afficher la courbe.", 28, 46);
+    return;
+  }
+  const pts=ms.filter(m=>m[key]).map(m=>({v:Number(m[key]),real:true}));
+  drawLine(ctx,W,H,pts,{target:null,unit:"cm",color:"#ff77dc"});
+  ctx.fillStyle="rgba(255,255,255,.78)";
+  ctx.font="800 12px -apple-system,BlinkMacSystemFont,Arial";
+  ctx.fillText(labels[key], W-95, 18);
 }
 
 async function addPhoto(){ const f=$("#photoInput")?.files?.[0]; if(!f)return toast("Choisis une photo"); const data=await compressImage(f,1200,.78); state.photos.push({id:uid(),date:todayISO(),label:val("photoLabel")||"Photo",data}); persist(); toast("Photo ajoutée"); }

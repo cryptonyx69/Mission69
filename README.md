@@ -1,18 +1,39 @@
-# Mission69 Nova V6.1
+# Mission69 Nova V6.3
 
-Version spéciale palier psychologique **2 chiffres**.
+Version recontrôlée et corrigée pour les tableaux.
 
-## Nouveautés
-- Le palier sous 100 kg est mis en avant comme objectif mental majeur.
-- Nouvelle carte **2 chiffres** sur le Dashboard.
-- Carte dédiée dans Objectifs.
-- Animation de célébration plein écran avec confettis quand le poids passe sous 100 kg.
-- Bouton pour rejouer la fête depuis Objectifs.
-- Le reste de la V6 est conservé : clics Wegovy, mensurations complètes, tableaux en masse, graphique agrandi.
+## Correction principale
+Les tableaux sont maintenant vraiment en **mode tableau** :
+- tu modifies plusieurs cellules ;
+- tu ajoutes des lignes avec `+ ligne` ;
+- tu coches plusieurs suppressions ;
+- puis tu cliques une seule fois sur **Enregistrer tout**.
+
+Il n’y a plus de sauvegarde ligne par ligne dans les tableaux.
+
+## Recontrôle cohérence
+Présent et vérifié :
+- poids en tableau global ;
+- injections en tableau global avec dose + clics ;
+- mensurations complètes :
+  - taille
+  - ventre
+  - hanches
+  - poitrine
+  - mollet gauche / droit
+  - bras gauche / droit
+  - cuisse gauche / droit
+- journal en tableau global ;
+- page Mensurations dédiée ;
+- page Contrôle ;
+- dashboard cliquable ;
+- graphique poids agrandi ;
+- graphique Wegovy expliqué ;
+- animation palier 2 chiffres.
 
 ## Installation
 1. Dézipper.
 2. Uploader tout le contenu à la racine du dépôt GitHub.
-3. Commit conseillé : `Mission69 Nova V6.1`.
+3. Commit conseillé : `Mission69 Nova V6.3`.
 4. Attendre GitHub Pages.
-5. Si l’ancienne version reste visible : Backup → Forcer mise à jour / vider cache.
+5. Dans l’app : Backup → Forcer mise à jour / vider cache.

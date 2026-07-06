@@ -66,3 +66,11 @@ select option{background:#111827;color:#fff} textarea{resize:vertical}
 @keyframes fall{0%{transform:translateY(-60px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:.2}}
 @keyframes spinGlow{to{transform:rotate(360deg)}}
 @keyframes pulseGlow{from{transform:scale(1);opacity:.75}to{transform:scale(1.06);opacity:1}}
+
+.sheet-tip{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:0 20px 14px}
+.sheet-savebar{position:sticky;top:76px;z-index:8;display:flex;gap:9px;flex-wrap:wrap;align-items:center;justify-content:space-between;border:1px solid rgba(120,255,214,.22);background:rgba(5,7,18,.78);backdrop-filter:blur(18px);border-radius:22px;margin:0 20px 12px;padding:10px 12px}
+.sheet-savebar b{color:var(--green)}
+.table-wrap table input,.table-wrap table select{background:rgba(255,255,255,.09)}
+.table-wrap table input:focus,.table-wrap table select:focus{background:rgba(120,255,214,.10)}
+.row-number{color:var(--muted);font-weight:900;text-align:center;min-width:38px}
+@media(max-width:920px){.sheet-savebar{top:auto;position:relative;margin:0 12px 12px}.sheet-tip{padding:0 12px 12px}}
