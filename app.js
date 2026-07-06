@@ -1,9 +1,9 @@
 
 "use strict";
 
-const VERSION = "Nova 5.0.0";
-const STORAGE_KEY = "mission69_nova_v5";
-const LEGACY_KEYS = ["mission69_withings_v4","mission69_studio_v3","mission69_elite_v2","mission69_dream_v1","mission69_pro_data","mission69_v2_data","mission69_v1_data"];
+const VERSION = "Nova 5.1.0";
+const STORAGE_KEY = "mission69_nova_v51";
+const LEGACY_KEYS = ["mission69_nova_v5","mission69_withings_v4","mission69_studio_v3","mission69_elite_v2","mission69_dream_v1","mission69_pro_data","mission69_v2_data","mission69_v1_data"];
 const $ = s => document.querySelector(s);
 
 function uid(){ return "id_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-5); }
@@ -168,7 +168,32 @@ function tableHTML(t){
   return weightsTable();
 }
 function weightsTable(){
-  return `<div class="card table-card"><div class="table-head"><h2 class="section-title">Liste des poids</h2><button class="btn primary" onclick="addEmptyWeight()">+ ligne</button></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Poids kg</th><th>Note</th><th>Actions</th></tr></thead><tbody>${sorted("weights").slice().reverse().map(w=>`<tr><td><input id="w_date_${w.id}" type="date" value="${esc(w.date)}"></td><td><input id="w_kg_${w.id}" type="number" step="0.1" value="${esc(w.kg)}"></td><td><input id="w_note_${w.id}" value="${esc(w.note)}"></td><td><button class="btn small primary" onclick="saveWeightRow('${w.id}')">OK</button> <button class="btn small danger" onclick="del('weights','${w.id}')">Suppr.</button></td></tr>`).join("")}</tbody></table></div></div>`;
+  const latest = currentWeight().toFixed(1);
+  return `<div class="card table-card">
+    <div class="table-head">
+      <div><h2 class="section-title">Liste des poids</h2><p class="muted">Ajoute une pesée puis corrige les lignes directement si besoin.</p></div>
+    </div>
+    <div class="table-add">
+      <div class="formgrid">
+        <input id="tw_date" type="date" value="${todayISO()}">
+        <input id="tw_kg" type="number" step="0.1" placeholder="Poids kg" value="">
+        <input id="tw_note" placeholder="Note optionnelle">
+        <button class="btn primary" onclick="addWeightFromTable()">Ajouter</button>
+      </div>
+      <p class="muted">Dernier poids connu : <b>${latest} kg</b>. Les modifications d’une ligne se valident avec OK.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Poids kg</th><th>Note</th><th>Actions</th></tr></thead>
+        <tbody>${sorted("weights").slice().reverse().map(w=>`<tr>
+          <td><input id="w_date_${w.id}" type="date" value="${esc(w.date)}"></td>
+          <td><input id="w_kg_${w.id}" type="number" step="0.1" value="${esc(w.kg)}"></td>
+          <td><input id="w_note_${w.id}" value="${esc(w.note)}"></td>
+          <td><button class="btn small primary" onclick="saveWeightRow('${w.id}')">OK</button> <button class="btn small danger" onclick="del('weights','${w.id}')">Suppr.</button></td>
+        </tr>`).join("")}</tbody>
+      </table>
+    </div>
+  </div>`;
 }
 function injectionsTable(){
   return `<div class="card table-card"><div class="table-head"><h2 class="section-title">Liste des injections</h2><button class="btn primary" onclick="addEmptyInjection()">+ ligne</button></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Heure</th><th>Dose</th><th>Site</th><th>Note</th><th>Actions</th></tr></thead><tbody>${sorted("injections").slice().reverse().map(i=>`<tr><td><input id="i_date_${i.id}" type="date" value="${esc(i.date)}"></td><td><input id="i_time_${i.id}" type="time" value="${esc(i.time)}"></td><td><input id="i_dose_${i.id}" type="number" step="0.01" value="${esc(i.dose)}"></td><td><select id="i_site_${i.id}">${state.sites.map(s=>`<option ${s===i.site?"selected":""}>${esc(s)}</option>`).join("")}</select></td><td><input id="i_note_${i.id}" value="${esc(i.note)}"></td><td><button class="btn small primary" onclick="saveInjectionRow('${i.id}')">OK</button> <button class="btn small danger" onclick="del('injections','${i.id}')">Suppr.</button></td></tr>`).join("")}</tbody></table></div></div>`;
@@ -201,16 +226,55 @@ function backupView(){
   return `<section class="grid two"><div class="card"><h2 class="section-title">Sauvegarde</h2><p class="muted">Tout reste local. Exporte le JSON régulièrement.</p><div class="chips"><button class="btn primary" onclick="exportJSON()">Exporter JSON</button><button class="btn" onclick="importJSON()">Importer JSON</button><button class="btn" onclick="exportCSV()">Exporter CSV</button><button class="btn danger" onclick="resetAll()">Réinitialiser</button></div><hr><button class="btn danger" onclick="hardRefresh()">Forcer mise à jour / vider cache</button></div><div class="card"><h2 class="section-title">Diagnostic</h2>${metric("Version",VERSION,"PWA")}${metric("Données",`${state.weights.length} poids · ${state.injections.length} injections`,`${state.measurements.length} mensurations · ${state.photos.length} photos`)}</div></section>`;
 }
 
-function addWeightForm(){ const kg=num($("#newWeightKg")?.value); if(!kg||kg<45||kg>220)return toast("Poids invalide"); state.weights.push({id:uid(),date:$("#newWeightDate").value||todayISO(),kg:round1(kg),note:$("#newWeightNote").value||""}); state.weights.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Poids ajouté"); }
+function addWeightForm(){
+  const kg=num($("#newWeightKg")?.value);
+  if(!kg||kg<45||kg>220)return toast("Poids invalide");
+  const date=$("#newWeightDate").value||todayISO();
+  addWeightRecord(date, kg, $("#newWeightNote").value||"", false);
+}
+function addWeightFromTable(){
+  const kg=num($("#tw_kg")?.value);
+  if(!kg||kg<45||kg>220)return toast("Poids invalide");
+  const date=$("#tw_date").value||todayISO();
+  addWeightRecord(date, kg, $("#tw_note").value||"", true);
+}
+function addWeightRecord(date, kg, note, stayOnTable){
+  const existing=state.weights.find(w=>w.date===date);
+  if(existing){
+    if(!confirm("Une pesée existe déjà à cette date. La remplacer ?")) return;
+    existing.kg=round1(kg);
+    existing.note=note||existing.note||"";
+  } else {
+    state.weights.push({id:uid(),date,kg:round1(kg),note});
+  }
+  state.weights.sort((a,b)=>a.date.localeCompare(b.date));
+  if(stayOnTable){ state.ui.view="tables"; state.ui.table="weights"; }
+  persist();
+  toast("Poids enregistré");
+}
 function addInjectionForm(){ const dose=num($("#newInjDose")?.value); if(!dose)return toast("Dose invalide"); state.injections.push({id:uid(),date:$("#newInjDate").value||todayISO(),time:$("#newInjTime").value||state.profile.injectionTime,dose,site:$("#newInjSite").value||nextSite(),note:$("#newInjNote").value||""}); state.injections.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Injection ajoutée"); }
 function addInjectionQuick(){ state.injections.push({id:uid(),date:todayISO(),time:state.profile.injectionTime,dose:doseAtWeek(weeksSinceStart()),site:nextSite(),note:""}); state.injections.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Injection enregistrée"); }
 function addMeasurementForm(){ const m={id:uid(),date:$("#newMDate").value||todayISO(),waist:num($("#newWaist").value),belly:num($("#newBelly").value),hips:num($("#newHips").value),chest:num($("#newChest").value),note:""}; if(!m.waist&&!m.belly&&!m.hips&&!m.chest)return toast("Ajoute au moins une mesure"); state.measurements.push(m); state.measurements.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Mensuration ajoutée"); }
 
-function addEmptyWeight(){ state.weights.push({id:uid(),date:todayISO(),kg:currentWeight(),note:""}); state.ui.table="weights"; persist(); }
+function addEmptyWeight(){ state.ui.view="tables"; state.ui.table="weights"; persist(); }
 function addEmptyInjection(){ state.injections.push({id:uid(),date:todayISO(),time:state.profile.injectionTime,dose:doseAtWeek(weeksSinceStart()),site:nextSite(),note:""}); state.ui.table="injections"; persist(); }
 function addEmptyMeasurement(){ state.measurements.push({id:uid(),date:todayISO(),waist:null,belly:null,hips:null,chest:null,note:""}); state.ui.table="measurements"; persist(); }
 function addEmptySymptom(){ state.symptoms.push({id:uid(),date:todayISO(),items:[],level:1,note:""}); state.ui.table="symptoms"; persist(); }
-function saveWeightRow(id){ const w=state.weights.find(x=>x.id===id); if(!w)return; const kg=num($("#w_kg_"+id).value); if(!kg)return toast("Poids invalide"); w.date=$("#w_date_"+id).value||w.date; w.kg=round1(kg); w.note=$("#w_note_"+id).value||""; state.weights.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Poids modifié"); }
+function saveWeightRow(id){
+  const w=state.weights.find(x=>x.id===id);
+  if(!w)return;
+  const kg=num($("#w_kg_"+id).value);
+  if(!kg||kg<45||kg>220)return toast("Poids invalide");
+  const newDate=$("#w_date_"+id).value||w.date;
+  const duplicate=state.weights.find(x=>x.id!==id && x.date===newDate);
+  if(duplicate && !confirm("Une autre pesée existe déjà à cette date. Garder deux lignes ?")) return;
+  w.date=newDate;
+  w.kg=round1(kg);
+  w.note=$("#w_note_"+id).value||"";
+  state.weights.sort((a,b)=>a.date.localeCompare(b.date));
+  persist();
+  toast("Poids modifié");
+}
 function saveInjectionRow(id){ const i=state.injections.find(x=>x.id===id); if(!i)return; i.date=$("#i_date_"+id).value||i.date; i.time=$("#i_time_"+id).value||i.time; i.dose=num($("#i_dose_"+id).value)||i.dose; i.site=$("#i_site_"+id).value||i.site; i.note=$("#i_note_"+id).value||""; state.injections.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Injection modifiée"); }
 function saveMeasurementRow(id){ const m=state.measurements.find(x=>x.id===id); if(!m)return; m.date=$("#m_date_"+id).value||m.date; m.waist=num($("#m_waist_"+id).value); m.belly=num($("#m_belly_"+id).value); m.hips=num($("#m_hips_"+id).value); m.chest=num($("#m_chest_"+id).value); m.note=$("#m_note_"+id).value||""; state.measurements.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Mensuration modifiée"); }
 function saveSymptomRow(id){ const s=state.symptoms.find(x=>x.id===id); if(!s)return; s.date=$("#s_date_"+id).value||s.date; s.items=($("#s_items_"+id).value||"").split(",").map(x=>x.trim()).filter(Boolean); s.level=Number($("#s_level_"+id).value)||1; s.note=$("#s_note_"+id).value||""; state.symptoms.sort((a,b)=>a.date.localeCompare(b.date)); persist(); toast("Journal modifié"); }
