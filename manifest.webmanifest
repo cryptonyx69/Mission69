@@ -1,13 +1,13 @@
 {
-  "name": "Mission69 v1.08",
+  "name": "Mission69 v1.09",
   "short_name": "Mission69",
-  "description": "Suivi Wegovy manuel, version 1.08.",
+  "description": "Suivi Wegovy manuel et fonctionnel.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#050712",
-  "background_color": "#050712",
+  "theme_color": "#060814",
+  "background_color": "#060814",
   "icons": [
     {
       "src": "icon.svg",

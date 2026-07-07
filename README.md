@@ -1,30 +1,26 @@
-# Mission69 v1.08
+# Mission69 v1.09
 
-Version 1.08, pas V2 : on reste en série 1.x tant que la base n’est pas totalement mature.
+Version corrective stable après écran noir.
 
-## Changements
-- Version affichée : **v1.08**.
-- Onglet **Contrôle** supprimé.
-- Onglet **Ajouter** supprimé : la saisie passe par **Données**.
-- Interface simplifiée : Dashboard / Données / Injections / Journal / Objectifs / Photos / Backup.
-- Tableaux en mode saisie globale :
-  - tu modifies plusieurs cellules ;
-  - tu ajoutes des lignes ;
-  - tu coches les suppressions ;
-  - puis **Enregistrer tout** une seule fois.
-- Graphique du poids :
-  - version dashboard plus minimaliste mais avec échelle visible ;
-  - version agrandie avec échelles détaillées, dates, kg, objectif et légende.
-- Graphique Wegovy conservé avec explication.
-- Animations de victoire ajoutées :
-  - −5 kg ;
-  - −10 kg ;
-  - paliers de poids ;
-  - palier légendaire **2 chiffres** sous 100 kg.
+## Objectif
+Revenir à une app fonctionnelle, utilisable tout de suite, avec saisie manuelle des données.
+
+## Corrections majeures
+- Réécriture propre de l’app pour éviter l’écran noir.
+- Ajout d’un écran d’erreur si un problème survient au lieu d’un écran vide.
+- Tableaux en saisie globale : modifier plusieurs cellules, ajouter des lignes, cocher des suppressions, puis cliquer une seule fois sur **Enregistrer tout**.
+- Version affichée : **v1.09**.
+- Onglets simples : Dashboard / Données / Injections / Journal / Objectifs / Photos / Backup.
+- Graphique poids dashboard avec échelle visible.
+- Graphique poids agrandi avec échelles détaillées.
+- Clics Wegovy conservés.
+- Mensurations complètes conservées.
+- Animations de victoire conservées.
 
 ## Installation
 1. Dézipper.
 2. Uploader tout le contenu à la racine du dépôt GitHub.
-3. Commit conseillé : `Mission69 v1.08`.
+3. Commit conseillé : `Mission69 v1.09`.
 4. Attendre GitHub Pages.
 5. Dans l’app : Backup → Forcer mise à jour / vider cache.
+6. Sur iPhone, si besoin : supprimer l’ancienne icône de l’écran d’accueil puis l’ajouter à nouveau depuis Safari.
